@@ -9,20 +9,38 @@ class SplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('SplashController onInit called');
     _navigateToNextScreen();
   }
 
   /// Check auth status and navigate to appropriate screen
   Future<void> _navigateToNextScreen() async {
-    // Add a small delay for splash screen visibility
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Add a small delay for splash screen visibility
+      await Future.delayed(const Duration(seconds: 2));
 
-    // Check if user is already logged in
-    final isLoggedIn = await _authService.checkAuthStatus();
+      // Check if user is already logged in with timeout
+      bool isLoggedIn = false;
+      try {
+        isLoggedIn = await _authService.checkAuthStatus().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('Auth check timeout, navigating to auth');
+            return false;
+          },
+        );
+      } catch (e) {
+        print('Error checking auth status: $e');
+        isLoggedIn = false;
+      }
 
-    if (isLoggedIn) {
-      Get.offAllNamed(Routes.HOME);
-    } else {
+      if (isLoggedIn) {
+        Get.offAllNamed(Routes.HOME);
+      } else {
+        Get.offAllNamed(Routes.AUTH);
+      }
+    } catch (e) {
+      print('Navigation error: $e');
       Get.offAllNamed(Routes.AUTH);
     }
   }

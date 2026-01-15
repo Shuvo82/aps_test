@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../utils/storage_helper.dart';
 
@@ -42,8 +43,9 @@ class UserModel {
 }
 
 class AuthService extends GetxService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late final FirebaseAuth _auth;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
@@ -51,6 +53,13 @@ class AuthService extends GetxService {
 
   User? get user => firebaseUser.value;
   bool get isLoggedIn => user != null;
+
+  AuthService() {
+    _auth = FirebaseAuth.instance;
+    // CRITICAL: Disable app verification BEFORE any auth operations
+    // This fixes the "empty reCAPTCHA token" error in development
+    _auth.setSettings(appVerificationDisabledForTesting: true);
+  }
 
   @override
   void onInit() {
@@ -181,12 +190,22 @@ class AuthService extends GetxService {
 
   /// Check if user is authenticated and fetch user data
   Future<bool> checkAuthStatus() async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      await fetchUserData(user.uid);
-      return true;
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await fetchUserData(user.uid).timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {
+            print('Firestore fetch timeout');
+          },
+        );
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error in checkAuthStatus: $e');
+      return false;
     }
-    return false;
   }
 
   /// Sign in with stored credentials (for biometric auth)
@@ -201,6 +220,102 @@ class AuthService extends GetxService {
       return false;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Sign in with Google
+  Future<bool> signInWithGoogle({required UserRole role}) async {
+    try {
+      isLoading.value = true;
+
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .authenticate();
+
+      if (googleUser == null) {
+        // User canceled the sign-in
+        return false;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.idToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+
+      if (userCredential.user != null) {
+        // Check if user already exists in Firestore
+        final doc = await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        if (!doc.exists) {
+          // Create new user document with the selected role
+          final userModel = UserModel(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+            role: role,
+            createdAt: DateTime.now(),
+          );
+
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set(userModel.toMap());
+
+          currentUser.value = userModel;
+        } else {
+          // Fetch existing user data
+          await fetchUserData(userCredential.user!.uid);
+        }
+
+        return true;
+      }
+      return false;
+    } on FirebaseAuthException catch (e) {
+      Get.snackbar(
+        'Google Sign In Error',
+        e.message ?? 'An error occurred during Google sign in',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      Get.log('FirebaseAuthException: ${e.code} - ${e.message}');
+      return false;
+    } catch (e) {
+      Get.snackbar(
+        'Google Sign In Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      Get.log('Exception during Google Sign In: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Sign out (including Google)
+  Future<void> signOutGoogle() async {
+    try {
+      await _googleSignIn.signOut();
+      await _auth.signOut();
+      currentUser.value = null;
+      await StorageHelper.setBiometricEnabled(false);
+    } catch (e) {
+      Get.snackbar(
+        'Sign Out Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 }

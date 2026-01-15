@@ -97,7 +97,7 @@ class BiometricToggleSection extends GetView<HomeController> {
                 Switch(
                   value: controller.isBiometricEnabled.value,
                   onChanged: controller.toggleBiometric,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
               ],
             ),

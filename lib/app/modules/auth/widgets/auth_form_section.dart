@@ -49,6 +49,14 @@ class AuthFormSection extends GetView<AuthController> {
 
               // Submit Button
               _buildSubmitButton(),
+
+              // Divider
+              const SizedBox(height: 24),
+              _buildDivider(),
+              const SizedBox(height: 24),
+
+              // Google Sign In Button
+              _buildGoogleSignInButton(),
             ],
           ),
         ),
@@ -294,6 +302,71 @@ class AuthFormSection extends GetView<AuthController> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: AppColors.primary.withOpacity(0.3),
+            thickness: 1,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: AppColors.primary.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: AppColors.primary.withOpacity(0.3),
+            thickness: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleSignInButton() {
+    final authService = Get.find<AuthService>();
+    return Obx(
+      () => OutlinedButton.icon(
+        onPressed: authService.isLoading.value
+            ? null
+            : controller.signInWithGoogle,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: Image.network(
+          'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+          height: 24,
+          width: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.g_mobiledata, size: 24, color: Colors.red);
+          },
+        ),
+        label: Text(
+          controller.isLogin.value
+              ? 'Sign in with Google'
+              : 'Sign up with Google',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }

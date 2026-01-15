@@ -11,6 +11,8 @@ class SplashView extends GetView<SplashController> {
 
   @override
   Widget build(BuildContext context) {
+    // Force controller initialization
+    controller;
     return Scaffold(
       body: Container(
         width: double.infinity,

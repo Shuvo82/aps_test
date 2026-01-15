@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/constant/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/utils/storage_helper.dart';
@@ -154,5 +155,61 @@ class AuthController extends GetxController {
     passwordController.clear();
     confirmPasswordController.clear();
     selectedRole.value = UserRole.user;
+  }
+
+  /// Sign in with Google
+  Future<void> signInWithGoogle() async {
+    // Show role selection dialog first
+    final role = await _showRoleSelectionDialog();
+    if (role == null) return; // User canceled
+
+    final success = await _authService.signInWithGoogle(role: role);
+    if (success) {
+      Get.offAllNamed(Routes.HOME);
+    }
+  }
+
+  /// Show role selection dialog
+  Future<UserRole?> _showRoleSelectionDialog() async {
+    return await Get.dialog<UserRole>(
+      AlertDialog(
+        title: const Text('Select Your Role'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Please select your role to continue:'),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.person, color: AppColors.primary),
+              title: const Text('Normal User'),
+              subtitle: const Text('Regular access'),
+              tileColor: AppColors.lightGreenBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: () => Get.back(result: UserRole.user),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const Icon(
+                Icons.admin_panel_settings,
+                color: AppColors.primary,
+              ),
+              title: const Text('Admin'),
+              subtitle: const Text('Full access'),
+              tileColor: AppColors.lightGreenBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: () => Get.back(result: UserRole.admin),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 }
