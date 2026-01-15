@@ -12,7 +12,20 @@
           "package_name": "com.shuvo.aps_test"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "21462327165-h7m423t0kmjji32nt6q7lu6h6ojsvi79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shuvo.aps_test",
+            "certificate_hash": "9b29678b3b02a37900eb31701918284e1b014fa9"
+          }
+        },
+        {
+          "client_id": "21462327165-dpsc4q1ese4jq5nt7tmgmvo7avnecri4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAoHyOxsKDw1eiuzbpB5E-twEaq4Q6xyDE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21462327165-dpsc4q1ese4jq5nt7tmgmvo7avnecri4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

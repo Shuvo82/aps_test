@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
@@ -45,7 +47,6 @@ class UserModel {
 class AuthService extends GetxService {
   late final FirebaseAuth _auth;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
@@ -223,25 +224,39 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Sign in with Google
+  /// Sign in with Google (Android only)
   Future<bool> signInWithGoogle({required UserRole role}) async {
+    // Only support Android
+    if (!Platform.isAndroid) {
+      Get.snackbar(
+        'Not Supported',
+        'Google Sign In is only supported on Android',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
+
     try {
       isLoading.value = true;
 
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn
-          .authenticate();
+      final googleSignIn = GoogleSignIn.instance;
 
-      if (googleUser == null) {
-        // User canceled the sign-in
-        return false;
-      }
+      // Sign out first to ensure fresh authentication (fixes reauth issues)
+      await googleSignIn.signOut();
+
+      // Initialize with serverClientId for Android (from google-services.json -> oauth_client -> client_id with type 3)
+      googleSignIn.initialize(
+        serverClientId:
+            '21462327165-dpsc4q1ese4jq5nt7tmgmvo7avnecri4.apps.googleusercontent.com',
+      );
+
+      // Trigger the authentication flow
+      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
-      // Create a new credential
+      // Create a new credential - use idToken for both on Android with v7
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.idToken,
         idToken: googleAuth.idToken,
@@ -282,6 +297,19 @@ class AuthService extends GetxService {
         return true;
       }
       return false;
+    } on GoogleSignInException catch (e) {
+      // Handle cancelled or failed sign-in gracefully
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        Get.log('Google Sign In cancelled by user');
+        return false;
+      }
+      Get.snackbar(
+        'Google Sign In Error',
+        e.description ?? 'An error occurred during Google sign in',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      Get.log('GoogleSignInException: ${e.code} - ${e.description}');
+      return false;
     } on FirebaseAuthException catch (e) {
       Get.snackbar(
         'Google Sign In Error',
@@ -303,10 +331,12 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Sign out (including Google)
+  /// Sign out (including Google - Android only)
   Future<void> signOutGoogle() async {
     try {
-      await _googleSignIn.signOut();
+      if (Platform.isAndroid) {
+        await GoogleSignIn.instance.signOut();
+      }
       await _auth.signOut();
       currentUser.value = null;
       await StorageHelper.setBiometricEnabled(false);
