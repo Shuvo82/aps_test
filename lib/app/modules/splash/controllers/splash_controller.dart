@@ -1,23 +1,29 @@
 import 'package:get/get.dart';
 
-class SplashController extends GetxController {
-  //TODO: Implement SplashController
+import '../../../core/services/auth_service.dart';
+import '../../../routes/app_pages.dart';
 
-  final count = 0.obs;
+class SplashController extends GetxController {
+  final AuthService _authService = Get.find<AuthService>();
+
   @override
   void onInit() {
     super.onInit();
+    _navigateToNextScreen();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-  }
+  /// Check auth status and navigate to appropriate screen
+  Future<void> _navigateToNextScreen() async {
+    // Add a small delay for splash screen visibility
+    await Future.delayed(const Duration(seconds: 2));
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
+    // Check if user is already logged in
+    final isLoggedIn = await _authService.checkAuthStatus();
 
-  void increment() => count.value++;
+    if (isLoggedIn) {
+      Get.offAllNamed(Routes.HOME);
+    } else {
+      Get.offAllNamed(Routes.AUTH);
+    }
+  }
 }
