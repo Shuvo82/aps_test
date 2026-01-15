@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "21462327165",
+    "project_id": "aps-test-b8a24",
+    "storage_bucket": "aps-test-b8a24.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21462327165:android:45ae019d830f074ef83614",
+        "android_client_info": {
+          "package_name": "com.shuvo.aps_test"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoHyOxsKDw1eiuzbpB5E-twEaq4Q6xyDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
