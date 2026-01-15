@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
@@ -8,6 +10,12 @@ class BiometricService extends GetxService {
   final RxBool canCheckBiometrics = false.obs;
   final RxBool isBiometricAvailable = false.obs;
   final RxList<BiometricType> availableBiometrics = <BiometricType>[].obs;
+
+  /// Completer to track when biometric check is done
+  final Completer<void> _initCompleter = Completer<void>();
+
+  /// Future that completes when biometric availability check is done
+  Future<void> get isReady => _initCompleter.future;
 
   @override
   void onInit() {
@@ -29,6 +37,11 @@ class BiometricService extends GetxService {
     } on PlatformException catch (e) {
       print('Error checking biometric availability: $e');
       isBiometricAvailable.value = false;
+    } finally {
+      // Mark initialization as complete
+      if (!_initCompleter.isCompleted) {
+        _initCompleter.complete();
+      }
     }
   }
 

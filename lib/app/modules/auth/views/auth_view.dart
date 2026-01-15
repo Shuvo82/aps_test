@@ -34,11 +34,11 @@ class AuthView extends GetView<AuthController> {
             ),
             const SizedBox(height: 20),
 
+            // Biometric Login Section (visible only when enabled - shown first for prominence)
+            const BiometricSection(),
+
             // Authentication Form Section
             const AuthFormSection(),
-
-            // Biometric Login Section (visible only when enabled)
-            const BiometricSection(),
 
             const SizedBox(height: 30),
           ],

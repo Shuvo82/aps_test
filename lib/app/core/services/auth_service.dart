@@ -97,9 +97,13 @@ class AuthService extends GetxService {
 
         currentUser.value = userModel;
 
-        // Store user email for biometric login
-        await StorageHelper.saveUserEmail(email);
-        await StorageHelper.saveUserPassword(password);
+        // Store user info for biometric login
+        await StorageHelper.saveUserInfo(
+          uid: credential.user!.uid,
+          email: email,
+          role: role == UserRole.admin ? 'admin' : 'user',
+          password: password,
+        );
 
         return true;
       }
@@ -136,9 +140,14 @@ class AuthService extends GetxService {
       if (credential.user != null) {
         await fetchUserData(credential.user!.uid);
 
-        // Store credentials for biometric login
-        await StorageHelper.saveUserEmail(email);
-        await StorageHelper.saveUserPassword(password);
+        // Store user info for biometric login
+        final user = currentUser.value;
+        await StorageHelper.saveUserInfo(
+          uid: credential.user!.uid,
+          email: email,
+          role: user?.role == UserRole.admin ? 'admin' : 'user',
+          password: password,
+        );
 
         return true;
       }
@@ -167,10 +176,34 @@ class AuthService extends GetxService {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
-        currentUser.value = UserModel.fromMap(doc.data()!);
+        final user = UserModel.fromMap(doc.data()!);
+        currentUser.value = user;
+
+        // Save user info locally for biometric login
+        await StorageHelper.saveUserInfo(
+          uid: user.uid,
+          email: user.email,
+          role: user.role == UserRole.admin ? 'admin' : 'user',
+        );
       }
     } catch (e) {
       print('Error fetching user data: $e');
+    }
+  }
+
+  /// Restore user from local storage (for biometric auth)
+  void restoreUserFromStorage() {
+    final uid = StorageHelper.getUserUid();
+    final email = StorageHelper.getUserEmail();
+    final roleStr = StorageHelper.getUserRole();
+
+    if (uid != null && email != null) {
+      currentUser.value = UserModel(
+        uid: uid,
+        email: email,
+        role: roleStr == 'admin' ? UserRole.admin : UserRole.user,
+        createdAt: DateTime.now(),
+      );
     }
   }
 
@@ -289,8 +322,15 @@ class AuthService extends GetxService {
               .set(userModel.toMap());
 
           currentUser.value = userModel;
+
+          // Save user info locally for biometric login
+          await StorageHelper.saveUserInfo(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+            role: role == UserRole.admin ? 'admin' : 'user',
+          );
         } else {
-          // Fetch existing user data
+          // Fetch existing user data (this also saves to local storage)
           await fetchUserData(userCredential.user!.uid);
         }
 

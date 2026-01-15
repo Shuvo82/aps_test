@@ -25,6 +25,9 @@ class AuthController extends GetxController {
   final RxBool isConfirmPasswordVisible = false.obs;
   final Rx<UserRole> selectedRole = UserRole.user.obs;
 
+  // Biometric ready flag for UI refresh
+  final RxBool isBiometricReady = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -42,8 +45,14 @@ class AuthController extends GetxController {
 
   /// Check if biometric login should be prompted
   Future<void> _checkBiometricLogin() async {
+    // Wait for biometric service to be fully initialized
+    await _biometricService.isReady;
+
+    // Mark biometric as ready to trigger UI refresh
+    isBiometricReady.value = true;
+
     // Small delay to ensure UI is ready
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 300));
 
     if (StorageHelper.isBiometricEnabled() &&
         StorageHelper.hasStoredCredentials() &&
@@ -135,14 +144,31 @@ class AuthController extends GetxController {
     );
 
     if (authenticated) {
-      // Sign in with stored credentials
-      final success = await _authService.signInWithStoredCredentials();
-      if (success) {
+      // Check if we have stored credentials
+      if (StorageHelper.hasStoredCredentials()) {
+        // Sign in with stored credentials
+        final success = await _authService.signInWithStoredCredentials();
+        if (success) {
+          Get.offAllNamed(Routes.HOME);
+        } else {
+          Get.snackbar(
+            'Error',
+            'Failed to login. Please enter your credentials.',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      } else if (_authService.isLoggedIn || StorageHelper.hasStoredUserInfo()) {
+        // User has valid Firebase session (e.g., Google Sign-In) or stored user info
+        // Restore user data from local storage if needed
+        if (_authService.currentUser.value == null) {
+          _authService.restoreUserFromStorage();
+        }
+        // Navigate to home since they're already authenticated
         Get.offAllNamed(Routes.HOME);
       } else {
         Get.snackbar(
           'Error',
-          'Failed to login. Please enter your credentials.',
+          'No credentials found. Please login with email/password or Google.',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
